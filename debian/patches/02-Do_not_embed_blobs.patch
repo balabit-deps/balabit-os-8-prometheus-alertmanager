@@ -1,0 +1,195 @@
+Description: Do not embed web resources in the binary.
+ Upstream is interested in keeping the resources embedded, this patch is to
+ comply with Debian policy.
+Forwarded: not-needed
+Author: Martín Ferrari <tincho@debian.org>
+Last-Update: 2016-07-12
+
+Index: prometheus-alertmanager/ui/web.go
+===================================================================
+--- prometheus-alertmanager.orig/ui/web.go
++++ prometheus-alertmanager/ui/web.go
+@@ -14,61 +14,34 @@
+ package ui
+ 
+ import (
+-	"bytes"
+ 	"fmt"
+-	"io"
+ 	"net/http"
+ 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
+ 	"path/filepath"
+ 
+-	"github.com/go-kit/kit/log"
+-	"github.com/go-kit/kit/log/level"
+ 	"github.com/prometheus/client_golang/prometheus/promhttp"
+ 	"github.com/prometheus/common/route"
+ )
+ 
+-func serveAsset(w http.ResponseWriter, req *http.Request, fp string, logger log.Logger) {
+-	info, err := AssetInfo(fp)
+-	if err != nil {
+-		level.Warn(logger).Log("msg", "Could not get file", "err", err)
+-		w.WriteHeader(http.StatusNotFound)
+-		return
+-	}
+-	file, err := Asset(fp)
+-	if err != nil {
+-		if err != io.EOF {
+-			level.Warn(logger).Log("msg", "Could not get file", "file", fp, "err", err)
+-		}
+-		w.WriteHeader(http.StatusNotFound)
+-		return
+-	}
+-
+-	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+-	http.ServeContent(w, req, info.Name(), info.ModTime(), bytes.NewReader(file))
+-}
+-
+ // Register registers handlers to serve files for the web interface.
+-func Register(r *route.Router, reloadCh chan<- chan error, logger log.Logger) {
++func Register(r *route.Router, reloadCh chan<- chan error, uiPath string) {
+ 	r.Get("/metrics", promhttp.Handler().ServeHTTP)
+ 
+ 	r.Get("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+-		serveAsset(w, req, "ui/app/index.html", logger)
++		http.ServeFile(w, req, filepath.Join(uiPath, "index.html"))
+ 	}))
+ 
+ 	r.Get("/script.js", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+-		serveAsset(w, req, "ui/app/script.js", logger)
++		http.ServeFile(w, req, filepath.Join(uiPath, "script.js"))
+ 	}))
+ 
+ 	r.Get("/favicon.ico", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+-		serveAsset(w, req, "ui/app/favicon.ico", logger)
++		http.ServeFile(w, req, filepath.Join(uiPath, "favicon.ico"))
+ 	}))
+ 
+-	r.Get("/lib/*filepath", http.HandlerFunc(
+-		func(w http.ResponseWriter, req *http.Request) {
+-			fp := route.Param(req.Context(), "filepath")
+-			serveAsset(w, req, filepath.Join("ui/app/lib", fp), logger)
+-		},
+-	))
++	r.Get("/app/*filepath", route.FileServe(filepath.Join(uiPath, "app")))
++
++	r.Get("/lib/*filepath", route.FileServe(filepath.Join(uiPath, "lib")))
+ 
+ 	r.Post("/-/reload", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+ 		errc := make(chan error)
+Index: prometheus-alertmanager/template/template.go
+===================================================================
+--- prometheus-alertmanager.orig/template/template.go
++++ prometheus-alertmanager/template/template.go
+@@ -15,6 +15,7 @@ package template
+ 
+ import (
+ 	"bytes"
++	"io/ioutil"
+ 	"net/url"
+ 	"path/filepath"
+ 	"regexp"
+@@ -27,7 +28,6 @@ import (
+ 
+ 	"github.com/prometheus/common/model"
+ 
+-	"github.com/prometheus/alertmanager/template/internal/deftmpl"
+ 	"github.com/prometheus/alertmanager/types"
+ )
+ 
+@@ -41,25 +41,25 @@ type Template struct {
+ 
+ // FromGlobs calls ParseGlob on all path globs provided and returns the
+ // resulting Template.
+-func FromGlobs(paths ...string) (*Template, error) {
++func FromGlobs(defaultTemplate string, paths ...string) (*Template, error) {
+ 	t := &Template{
+ 		text: tmpltext.New("").Option("missingkey=zero"),
+ 		html: tmplhtml.New("").Option("missingkey=zero"),
+ 	}
+-	var err error
+-
+ 	t.text = t.text.Funcs(tmpltext.FuncMap(DefaultFuncs))
+ 	t.html = t.html.Funcs(tmplhtml.FuncMap(DefaultFuncs))
+ 
+-	b, err := deftmpl.Asset("template/default.tmpl")
+-	if err != nil {
+-		return nil, err
+-	}
+-	if t.text, err = t.text.Parse(string(b)); err != nil {
+-		return nil, err
+-	}
+-	if t.html, err = t.html.Parse(string(b)); err != nil {
+-		return nil, err
++	if defaultTemplate != "" {
++		b, err := ioutil.ReadFile(defaultTemplate)
++		if err != nil {
++			return nil, err
++		}
++		if t.text, err = t.text.Parse(string(b)); err != nil {
++			return nil, err
++		}
++		if t.html, err = t.html.Parse(string(b)); err != nil {
++			return nil, err
++		}
+ 	}
+ 
+ 	for _, tp := range paths {
+Index: prometheus-alertmanager/cmd/alertmanager/main.go
+===================================================================
+--- prometheus-alertmanager.orig/cmd/alertmanager/main.go
++++ prometheus-alertmanager/cmd/alertmanager/main.go
+@@ -148,6 +148,8 @@ func main() {
+ 		externalURL   = kingpin.Flag("web.external-url", "The URL under which Alertmanager is externally reachable (for example, if Alertmanager is served via a reverse proxy). Used for generating relative and absolute links back to Alertmanager itself. If the URL has a path portion, it will be used to prefix all HTTP endpoints served by Alertmanager. If omitted, relevant URL components will be derived automatically.").String()
+ 		routePrefix   = kingpin.Flag("web.route-prefix", "Prefix for the internal routes of web endpoints. Defaults to path of --web.external-url.").String()
+ 		listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for the web interface and API.").Default(":9093").String()
++		uiPath = kingpin.Flag("web.ui-path", "Path to static UI directory.").Default("/usr/share/prometheus/alertmanager/ui/").String()
++		defaultTemplate = kingpin.Flag("template.default", "Path to default notification template.").Default("/usr/share/prometheus/alertmanager/default.tmpl").String()
+ 
+ 		clusterBindAddr = kingpin.Flag("cluster.listen-address", "Listen address for cluster.").
+ 				Default(defaultClusterAddr).String()
+@@ -343,7 +345,7 @@ func main() {
+ 			return err
+ 		}
+ 
+-		tmpl, err = template.FromGlobs(conf.Templates...)
++		tmpl, err = template.FromGlobs(*defaultTemplate, conf.Templates...)
+ 		if err != nil {
+ 			return err
+ 		}
+@@ -391,7 +393,7 @@ func main() {
+ 
+ 	webReload := make(chan chan error)
+ 
+-	ui.Register(router, webReload, logger)
++	ui.Register(router, webReload, *uiPath)
+ 
+ 	apiv.Register(router.WithPrefix("/api/v1"))
+ 
+Index: prometheus-alertmanager/cli/check_config.go
+===================================================================
+--- prometheus-alertmanager.orig/cli/check_config.go
++++ prometheus-alertmanager/cli/check_config.go
+@@ -83,7 +83,7 @@ func CheckConfig(args []string) error {
+ 			fmt.Printf(" - %d receivers\n", len(cfg.Receivers))
+ 			fmt.Printf(" - %d templates\n", len(cfg.Templates))
+ 			if len(cfg.Templates) > 0 {
+-				_, err = template.FromGlobs(cfg.Templates...)
++				_, err = template.FromGlobs("", cfg.Templates...)
+ 				if err != nil {
+ 					fmt.Printf("  FAILED: %s\n", err)
+ 					failed++
+Index: prometheus-alertmanager/notify/impl_test.go
+===================================================================
+--- prometheus-alertmanager.orig/notify/impl_test.go
++++ prometheus-alertmanager/notify/impl_test.go
+@@ -205,7 +205,7 @@ func defaultRetryCodes() []int {
+ }
+ 
+ func createTmpl(t *testing.T) *template.Template {
+-	tmpl, err := template.FromGlobs()
++	tmpl, err := template.FromGlobs("../template/default.tmpl")
+ 	require.NoError(t, err)
+ 	tmpl.ExternalURL, _ = url.Parse("http://am")
+ 	return tmpl

@@ -1,0 +1,81 @@
+Description: Change default paths to match Debian packaging
+Forwarded: not-needed
+Author: Martín Ferrari <tincho@debian.org>
+Last-Update: 2016-07-12
+
+--- a/cmd/alertmanager/main.go
++++ b/cmd/alertmanager/main.go
+@@ -139,8 +139,8 @@
+ 		panic(err)
+ 	}
+ 	var (
+-		configFile      = kingpin.Flag("config.file", "Alertmanager configuration file name.").Default("alertmanager.yml").String()
+-		dataDir         = kingpin.Flag("storage.path", "Base path for data storage.").Default("data/").String()
++		configFile      = kingpin.Flag("config.file", "Alertmanager configuration file name.").Default("/etc/prometheus/alertmanager.yml").String()
++		dataDir         = kingpin.Flag("storage.path", "Base path for data storage.").Default("/var/lib/prometheus/alertmanager/").String()
+ 		retention       = kingpin.Flag("data.retention", "How long to keep data for.").Default("120h").Duration()
+ 		alertGCInterval = kingpin.Flag("alerts.gc-interval", "Interval between alert GC.").Default("30m").Duration()
+ 		logLevelString  = kingpin.Flag("log.level", "Only log messages with the given severity or above.").Default("info").Enum("debug", "info", "warn", "error")
+--- a/cli/root.go
++++ b/cli/root.go
+@@ -29,7 +29,7 @@
+ 	alertmanagerURL *url.URL
+ 	output          string
+ 
+-	configFiles = []string{os.ExpandEnv("$HOME/.config/amtool/config.yml"), "/etc/amtool/config.yml"}
++	configFiles = []string{os.ExpandEnv("$HOME/.config/prometheus/amtool.yml"), "/etc/prometheus/amtool.yml"}
+ 	legacyFlags = map[string]string{"comment_required": "require-comment"}
+ )
+ 
+@@ -59,7 +59,7 @@
+ 	format.InitFormatFlags(app)
+ 
+ 	app.Flag("verbose", "Verbose running information").Short('v').BoolVar(&verbose)
+-	app.Flag("alertmanager.url", "Alertmanager to talk to").URLVar(&alertmanagerURL)
++	app.Flag("alertmanager.url", "Alertmanager to talk to").Default("http://localhost:9093/").URLVar(&alertmanagerURL)
+ 	app.Flag("output", "Output formatter (simple, extended, json)").Short('o').Default("simple").EnumVar(&output, "simple", "extended", "json")
+ 	app.Version(version.Print("amtool"))
+ 	app.GetFlag("help").Short('h')
+@@ -91,8 +91,8 @@
+ 
+ Config File:
+ The alertmanager tool will read a config file in YAML format from one of two
+-default config locations: $HOME/.config/amtool/config.yml or
+-/etc/amtool/config.yml
++default config locations: $HOME/.config/prometheus/amtool.yml or
++/etc/prometheus/amtool.yml
+ 
+ All flags can be given in the config file, but the following are the suited for
+ static configuration:
+--- a/README.md
++++ b/README.md
+@@ -265,7 +265,7 @@
+ 
+ ### Config
+ 
+-Amtool allows a config file to specify some options for convenience. The default config file paths are `$HOME/.config/amtool/config.yml` or `/etc/amtool/config.yml`
++Amtool allows a config file to specify some options for convenience. The default config file paths are `$HOME/.config/prometheus/amtool.yml` or `/etc/prometheus/amtool.yml`
+ 
+ An example configfile might look like the following:
+ 
+--- a/cli/silence_add.go
++++ b/cli/silence_add.go
+@@ -75,7 +75,7 @@
+ 		c      = &silenceAddCmd{}
+ 		addCmd = cc.Command("add", silenceAddHelp)
+ 	)
+-	addCmd.Flag("author", "Username for CreatedBy field").Short('a').Default(username()).StringVar(&c.author)
++	addCmd.Flag("author", "Username for CreatedBy field").Short('a').StringVar(&c.author)
+ 	addCmd.Flag("require-comment", "Require comment to be set").Hidden().Default("true").BoolVar(&c.requireComment)
+ 	addCmd.Flag("duration", "Duration of silence").Short('d').Default("1h").StringVar(&c.duration)
+ 	addCmd.Flag("start", "Set when the silence should start. RFC3339 format 2006-01-02T15:04:05Z07:00").StringVar(&c.start)
+@@ -98,6 +98,9 @@
+ 		return fmt.Errorf("no matchers specified")
+ 	}
+ 
++	if c.author == "" {
++		c.author = username()
++	}
+ 	var endsAt time.Time
+ 	if c.end != "" {
+ 		endsAt, err = time.Parse(time.RFC3339, c.end)

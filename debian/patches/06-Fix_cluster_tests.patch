@@ -1,0 +1,60 @@
+Description: Cluster tests assume the local host will have an RFC1918 address
+ present, and fails otherwise. Force the use loopback addresses instead.
+ Forwarded as https://github.com/prometheus/alertmanager/issues/1445
+
+--- a/cluster/cluster_test.go
++++ b/cluster/cluster_test.go
+@@ -29,7 +29,7 @@
+ 	p, err := Create(
+ 		logger,
+ 		prometheus.NewRegistry(),
+-		"0.0.0.0:0",
++		"127.0.0.1:0",
+ 		"",
+ 		[]string{},
+ 		true,
+@@ -56,7 +56,7 @@
+ 	p2, err := Create(
+ 		logger,
+ 		prometheus.NewRegistry(),
+-		"0.0.0.0:0",
++		"127.0.0.2:0",
+ 		"",
+ 		[]string{p.Self().Address()},
+ 		true,
+@@ -88,7 +88,7 @@
+ 	p, err := Create(
+ 		logger,
+ 		prometheus.NewRegistry(),
+-		"0.0.0.0:0",
++		"127.0.0.1:0",
+ 		"",
+ 		[]string{},
+ 		true,
+@@ -111,7 +111,7 @@
+ 	p2, err := Create(
+ 		logger,
+ 		prometheus.NewRegistry(),
+-		"0.0.0.0:0",
++		"127.0.0.2:0",
+ 		"",
+ 		[]string{},
+ 		true,
+@@ -149,7 +149,7 @@
+ 	p, err := Create(
+ 		logger,
+ 		prometheus.NewRegistry(),
+-		"0.0.0.0:0",
++		"127.0.0.1:0",
+ 		"",
+ 		[]string{},
+ 		true,
+@@ -198,7 +198,7 @@
+ 	p, err := Create(
+ 		logger,
+ 		prometheus.NewRegistry(),
+-		"0.0.0.0:0",
++		"127.0.0.1:0",
+ 		"",
+ 		[]string{},
+ 		true,

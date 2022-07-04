@@ -1,0 +1,68 @@
+#!/usr/bin/make -f
+include /usr/share/dpkg/pkg-info.mk
+
+export DH_VERBOSE=1
+export DH_GOPKG := github.com/prometheus/alertmanager
+
+# Acceptance tests need to be run separately.
+export DH_GOLANG_EXCLUDES := $(DH_GOPKG)/test/acceptance examples
+export DH_GOLANG_INSTALL_EXTRA := template/default.tmpl
+
+METAPKG := github.com/prometheus/common
+BINPKG := prometheus-alertmanager
+LIBPKG := golang-github-prometheus-alertmanager-dev
+
+BRANCH     := debian/sid
+USER       := pkg-go-maintainers@lists.alioth.debian.org
+BUILD_DATE := $(shell date --utc --date='@$(SOURCE_DATE_EPOCH)' \
+    +%Y%m%d-%H:%M:%S)
+GO_VERSION := $(shell go version | sed 's/go version \(\S*\).*/\1/')
+GCCGO      := $(strip $(shell go version | grep gccgo))
+VERSION := $(shell echo '$(DEB_VERSION_UPSTREAM)' | tr '~' '-')
+BUILDFLAGS := -ldflags \
+  " -X $(METAPKG)/version.Version=$(VERSION)\
+    -X $(METAPKG)/version.Revision=$(DEB_VERSION)\
+    -X $(METAPKG)/version.Branch=$(BRANCH)\
+    -X $(METAPKG)/version.BuildUser=$(USER)\
+    -X $(METAPKG)/version.BuildDate=$(BUILD_DATE)\
+    -X $(METAPKG)/version.GoVersion=$(GO_VERSION)"
+
+%:
+	dh $@ --buildsystem=golang --with=golang,bash-completion \
+	    --builddirectory=build
+
+WHATIS1 := "prometheus-alertmanager \\- The Prometheus alert manager"
+WHATIS2 := "promtool \\- Tooling for the Prometheus alert manager"
+
+override_dh_auto_build:
+	dh_auto_build -- $(BUILDFLAGS)
+	cp -v build/bin/alertmanager build/bin/prometheus-alertmanager
+	# Build bash completion scripts.
+	mkdir -vp build/bash_completion.d
+	build/bin/amtool --completion-script-bash > \
+	    build/bash_completion.d/amtool
+	# Build man pages.
+	mkdir -vp build/man
+	build/bin/prometheus-alertmanager --help-man > \
+	    build/man/prometheus-alertmanager.1
+	build/bin/amtool --help-man > \
+	    build/man/amtool.1
+	# Remove build information headers, and fix whatis entry.
+	sed -i '/^  /d; /^.SH "NAME"/,+1c.SH "NAME"\n'$(WHATIS1) \
+	    build/man/prometheus-alertmanager.1
+	sed -i '/^  /d; /^.SH "NAME"/,+1c.SH "NAME"\n'$(WHATIS2) \
+	    build/man/amtool.1
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	dh_auto_test
+	# Don't abort if acceptance tests fail, as they are too sensitive to
+	# timing issues.
+	GOPATH=$(CURDIR)/build go test -v $(DH_GOPKG)/test/acceptance || true
+endif
+
+override_dh_auto_install:
+	dh_auto_install
+	dh_install -p$(LIBPKG) usr/share/gocode
+	dh_install -p$(BINPKG) usr/bin/amtool
+	dh_install -p$(BINPKG) usr/bin/prometheus-alertmanager

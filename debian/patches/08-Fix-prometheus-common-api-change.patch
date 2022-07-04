@@ -1,0 +1,81 @@
+Description: Fix FTBFS in Focal due to an API change in prometheus common lib
+ Enable HTTP/2 in all calls to NewClientFromConfig.
+Author: Lucas Kanashiro <lucas.kanashiro@canonical.com>
+Last-Updated: 2020-09-30
+
+Index: prometheus-alertmanager-0.15.3+ds/notify/impl.go
+===================================================================
+--- prometheus-alertmanager-0.15.3+ds.orig/notify/impl.go
++++ prometheus-alertmanager-0.15.3+ds/notify/impl.go
+@@ -172,7 +172,7 @@ func (w *Webhook) Notify(ctx context.Con
+ 	req.Header.Set("Content-Type", contentTypeJSON)
+ 	req.Header.Set("User-Agent", userAgentHeader)
+ 
+-	c, err := commoncfg.NewClientFromConfig(*w.conf.HTTPConfig, "webhook")
++	c, err := commoncfg.NewClientFromConfig(*w.conf.HTTPConfig, "webhook", true)
+ 	if err != nil {
+ 		return false, err
+ 	}
+@@ -590,7 +590,7 @@ func (n *PagerDuty) Notify(ctx context.C
+ 		return false, err
+ 	}
+ 
+-	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "pagerduty")
++	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "pagerduty", true)
+ 	if err != nil {
+ 		return false, err
+ 	}
+@@ -745,7 +745,7 @@ func (n *Slack) Notify(ctx context.Conte
+ 		return false, err
+ 	}
+ 
+-	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "slack")
++	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "slack", true)
+ 	if err != nil {
+ 		return false, err
+ 	}
+@@ -832,7 +832,7 @@ func (n *Hipchat) Notify(ctx context.Con
+ 		return false, err
+ 	}
+ 
+-	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "hipchat")
++	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "hipchat", true)
+ 	if err != nil {
+ 		return false, err
+ 	}
+@@ -913,7 +913,7 @@ func (n *Wechat) Notify(ctx context.Cont
+ 		return false, err
+ 	}
+ 
+-	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "wechat")
++	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "wechat", true)
+ 	if err != nil {
+ 		return false, err
+ 	}
+@@ -1059,7 +1059,7 @@ func (n *OpsGenie) Notify(ctx context.Co
+ 		return retry, err
+ 	}
+ 
+-	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "opsgenie")
++	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "opsgenie", true)
+ 	if err != nil {
+ 		return false, err
+ 	}
+@@ -1256,7 +1256,7 @@ func (n *VictorOps) Notify(ctx context.C
+ 		return false, err
+ 	}
+ 
+-	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "victorops")
++	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "victorops", true)
+ 	if err != nil {
+ 		return false, err
+ 	}
+@@ -1353,7 +1353,7 @@ func (n *Pushover) Notify(ctx context.Co
+ 	u.RawQuery = parameters.Encode()
+ 	level.Debug(n.logger).Log("msg", "Sending Pushover message", "incident", key, "url", u.String())
+ 
+-	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "pushover")
++	c, err := commoncfg.NewClientFromConfig(*n.conf.HTTPConfig, "pushover", true)
+ 	if err != nil {
+ 		return false, err
+ 	}

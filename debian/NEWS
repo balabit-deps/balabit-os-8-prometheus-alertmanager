@@ -1,0 +1,20 @@
+prometheus-alertmanager (0.15.0~rc.2-1) experimental; urgency=medium
+
+  The Debian package of the alertmanager does not include a web application.
+
+  Please, use the amtool command-line application to obtain equivalent
+  functionality.
+
+  Alternatively, you can deploy your own files to be served by the embedded web
+  server, by placing them in /usr/share/prometheus/alertmanager/ui/, or by
+  using the --web.local-assets option to point to a different path. Note that
+  the web server will only serve files in the lib and app sub-directories.
+
+  You can still use the HTTP API, and the special handlers:
+
+    /metrics
+    /-/reload
+    /-/healthy
+    /-/ready
+
+ -- Martín Ferrari <tincho@debian.org>  Sat, 19 May 2018 17:27:10 +0000

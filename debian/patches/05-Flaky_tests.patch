@@ -1,0 +1,18 @@
+Description: Fix flaky tests
+ dispatch_test.go: Apparently, some signal is being delivered a few
+   microseconds too early. This patch allows for a 10% difference in timing.
+Bug-Debian: https://bugs.debian.org/830936
+Forwarded: https://github.com/prometheus/alertmanager/issues/427
+Author: Martín Ferrari <tincho@debian.org>
+Last-Update: 2016-07-13
+--- a/dispatch/dispatch_test.go
++++ b/dispatch/dispatch_test.go
+@@ -224,7 +224,7 @@
+ 			t.Fatalf("expected new batch after group interval but received none")
+ 
+ 		case batch := <-alertsCh:
+-			if s := time.Since(last); s < opts.GroupInterval {
++			if s := time.Since(last); s < opts.GroupInterval * 90 / 100 {
+ 				t.Fatalf("received batch too early after %v", s)
+ 			}
+ 			exp := types.AlertSlice{a1, a3}

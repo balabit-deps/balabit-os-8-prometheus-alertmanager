@@ -1,0 +1,71 @@
+Source: prometheus-alertmanager
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Debian Go Packaging Team <pkg-go-maintainers@lists.alioth.debian.org>
+Uploaders: Martín Ferrari <tincho@debian.org>,
+Section: net
+Testsuite: autopkgtest-pkg-go
+Priority: optional
+Build-Depends: adduser,
+               bash-completion,
+               debhelper (>= 11),
+               dh-golang (>= 1.31~),
+               golang-any (>= 2:1.10~),
+               golang-github-cenkalti-backoff-dev,
+               golang-github-cespare-xxhash-dev,
+               golang-github-go-kit-kit-dev,
+               golang-github-gogo-protobuf-dev (>= 0.5),
+               golang-github-hashicorp-go-sockaddr-dev,
+               golang-github-hashicorp-memberlist-dev (>= 0.1.0~),
+               golang-github-kylelemons-godebug-dev,
+               golang-github-oklog-ulid-dev,
+               golang-github-pkg-errors-dev,
+               golang-github-prometheus-client-golang-dev (>= 0.9.0~pre1+git20180417),
+               golang-github-prometheus-common-dev (>= 0+git20181119),
+               golang-github-satori-go.uuid-dev,
+               golang-golang-x-net-dev,
+               golang-gopkg-alecthomas-kingpin.v2-dev,
+               golang-gopkg-yaml.v2-dev (>= 2.2.1-1~),
+Standards-Version: 4.3.0
+Vcs-Browser: https://salsa.debian.org/go-team/packages/prometheus-alertmanager
+Vcs-Git: https://salsa.debian.org/go-team/packages/prometheus-alertmanager.git
+Homepage: https://prometheus.io/
+XS-Go-Import-Path: github.com/prometheus/alertmanager
+
+Package: prometheus-alertmanager
+Architecture: any
+Depends: daemon | systemd-sysv,
+         ${misc:Depends},
+         ${shlibs:Depends},
+Built-Using: ${misc:Built-Using},
+Description: Handle and deliver alerts created by Prometheus
+ The Alertmanager handles alerts sent by client applications such as the
+ Prometheus server. It takes care of deduplicating, grouping, and routing them
+ to the correct receiver integration such as email, PagerDuty, or OpsGenie. It
+ also takes care of silencing and inhibition of alerts.
+
+Package: golang-github-prometheus-alertmanager-dev
+Architecture: all
+Depends: golang-github-cenkalti-backoff-dev,
+         golang-github-cespare-xxhash-dev,
+         golang-github-go-kit-kit-dev,
+         golang-github-gogo-protobuf-dev (>= 0.5),
+         golang-github-hashicorp-go-sockaddr-dev,
+         golang-github-hashicorp-memberlist-dev (>= 0.1.0~),
+         golang-github-kylelemons-godebug-dev,
+         golang-github-oklog-ulid-dev,
+         golang-github-pkg-errors-dev,
+         golang-github-prometheus-client-golang-dev (>= 0.9.0~pre1+git20180417),
+         golang-github-prometheus-common-dev (>= 0+git20180518),
+         golang-github-satori-go.uuid-dev,
+         golang-golang-x-net-dev,
+         golang-gopkg-alecthomas-kingpin.v2-dev,
+         golang-gopkg-yaml.v2-dev (>= 2.2.1-1~),
+         ${misc:Depends},
+         ${shlibs:Depends},
+Description: Handle and deliver alerts created by Prometheus -- source
+ The Alertmanager handles alerts sent by client applications such as the
+ Prometheus server. It takes care of deduplicating, grouping, and routing them
+ to the correct receiver integration such as email, PagerDuty, or OpsGenie. It
+ also takes care of silencing and inhibition of alerts.
+ .
+ This package provides the source code to be used as a library.

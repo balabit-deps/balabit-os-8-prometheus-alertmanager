@@ -1,0 +1,23 @@
+Description: Fix paths in acceptance tests.
+ Upstream uses a different build mechanism, which somehow makes the original
+ code work.
+Forwarded: not-needed
+Author: Martín Ferrari <tincho@debian.org>
+Last-Update: 2016-07-12
+
+--- a/test/acceptance.go
++++ b/test/acceptance.go
+@@ -253,10 +253,12 @@
+ 
+ // Start the alertmanager and wait until it is ready to receive.
+ func (am *Alertmanager) Start() {
+-	cmd := exec.Command("../../alertmanager",
++	bin := filepath.Join(os.Getenv("GOPATH"), "bin/alertmanager")
++	cmd := exec.Command(bin,
+ 		"--config.file", am.confFile.Name(),
+ 		"--log.level", "debug",
+ 		"--web.listen-address", am.apiAddr,
++		"--template.default", "../../template/default.tmpl",
+ 		"--storage.path", am.dir,
+ 		"--cluster.listen-address", am.clusterAddr,
+ 		"--cluster.settle-timeout", "0s",
