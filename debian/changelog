@@ -1,3 +1,9 @@
+prometheus-alertmanager (0.15.3+ds-3ubuntu1.1) focal-security; urgency=medium
+
+  * No-change rebuild due to golang-1.13 update
+
+ -- David Fernandez Gonzalez <david.fernandezgonzalez@canonical.com>  Tue, 11 Oct 2022 03:36:31 +0200
+
 prometheus-alertmanager (0.15.3+ds-3ubuntu1) focal; urgency=medium
 
   * Fix FTBFS due to a change in the Prometheus common library (LP: #1897967)
