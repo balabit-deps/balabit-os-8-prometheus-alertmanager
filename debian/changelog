@@ -1,3 +1,14 @@
+prometheus-alertmanager (0.15.3+ds-3ubuntu1.2) focal-security; urgency=medium
+
+  * SECURITY UPDATE: Stored XSS vulnerability in Alertmanager UI via 
+    /api/v1/alerts endpoint                                                  
+    - debian/patches/CVE-2023-40577.patch: Input validation for generatorURL 
+      in ui/app/src/Views/AlertList/AlertView.elm to prevent stored XSS in 
+      Alertmanager UI
+    - CVE-2023-40577 
+
+ -- Vyom Yadav <vyom.yadav@canonical.com>  Mon, 29 Jul 2024 09:50:25 +0530
+
 prometheus-alertmanager (0.15.3+ds-3ubuntu1.1) focal-security; urgency=medium
 
   * No-change rebuild due to golang-1.13 update

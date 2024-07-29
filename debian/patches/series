@@ -6,3 +6,4 @@
 06-Fix_cluster_tests.patch
 07-Promlog_fix.patch
 08-Fix-prometheus-common-api-change.patch
+CVE-2023-40577.patch
